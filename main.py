@@ -8,7 +8,9 @@ import atexit
 from opentelemetry import _logs
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from opentelemetry.exporter.otlp.proto.http._log_exporter import (
+    OTLPLogExporter as OTLPHTTPLogExporter,
+)
 
 
 class SafeOTLPLogExporter:
@@ -21,9 +23,46 @@ class SafeOTLPLogExporter:
     """
 
     def __init__(
-        self, *args, initial_backoff: float = 1.0, max_backoff: float = 300.0, **kwargs
+        self,
+        *args,
+        exporter_cls=None,
+        endpoint: str | None = None,
+        initial_backoff: float = 1.0,
+        max_backoff: float = 300.0,
+        **kwargs,
     ):
-        self._inner = OTLPLogExporter(*args, **kwargs)
+        """
+        If exporter_cls is provided, instantiate that exporter.
+        Otherwise try to pick based on endpoint.scheme:
+            - http/https -> OTLP HTTP exporter
+            - grpc/grpcs (or no http scheme) -> OTLP gRPC exporter
+        """
+        # choose exporter class
+        if exporter_cls is None:
+            scheme = urlparse(endpoint).scheme.lower() if endpoint else None
+            if scheme in ("http", "https"):
+                exporter_cls = OTLPHTTPLogExporter
+            else:
+                # lazy-import gRPC exporter; if that fails, fall back to HTTP
+                try:
+                    from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
+                        OTLPLogExporter as OTLPGrpcLogExporter,
+                    )
+
+                    exporter_cls = OTLPGrpcLogExporter
+                except Exception as exc:
+                    import sys
+
+                    print(
+                        "gRPC OTLP exporter unavailable; falling back to HTTP exporter. "
+                        "Install system libstdc++ (e.g. apt install libstdc++6) to enable gRPC. "
+                        f"Import error: {exc}",
+                        file=sys.stderr,
+                    )
+                    exporter_cls = OTLPHTTPLogExporter
+
+        # instantiate the chosen exporter; caller may pass endpoint in kwargs/args
+        self._inner = exporter_cls(*args, **kwargs)
         self._lock = threading.Lock()
         self._reported = False  # ensure we print the first failure only
         self._backoff_initial = float(initial_backoff)
@@ -181,7 +220,7 @@ def configure_logging():
     _logs.set_logger_provider(provider)
 
     # Start a background prober that will attach the exporter when reachable.
-    endpoint = "http://localhost:4318/v1/logs"
+    endpoint = "grpc://localhost:4318/v1/logs"
     _start_otlp_prober(provider, endpoint, initial_backoff=2.0, max_backoff=300.0)
 
     otel_handler = LoggingHandler()
