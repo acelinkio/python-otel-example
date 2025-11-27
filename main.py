@@ -4,6 +4,7 @@ import socket
 import time
 import threading
 import atexit
+import os
 
 from opentelemetry import _logs
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
@@ -39,8 +40,18 @@ class SafeOTLPLogExporter:
         """
         # choose exporter class
         if exporter_cls is None:
-            scheme = urlparse(endpoint).scheme.lower() if endpoint else None
-            if scheme in ("http", "https"):
+            # allow explicit protocol via env var (http/protobuf, http/json, grpc)
+            proto_env = os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL", "").lower().strip()
+            if proto_env in ("grpc",):
+                want_grpc = True
+            elif proto_env.startswith("http") or proto_env in ("http/protobuf", "http/json", "http"):
+                want_grpc = False
+            else:
+                # fall back to endpoint scheme if available
+                scheme = urlparse(endpoint).scheme.lower() if endpoint else None
+                want_grpc = scheme not in ("http", "https")
+
+            if not want_grpc:
                 exporter_cls = OTLPHTTPLogExporter
             else:
                 # lazy-import gRPC exporter; if that fails, fall back to HTTP
