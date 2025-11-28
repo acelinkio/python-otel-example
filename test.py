@@ -157,24 +157,7 @@ class SafeOTLPExporter:
 
 # --- end SafeOTLPExporter -----------------------------------------------------
 
-def _is_endpoint_reachable(url: str, timeout: float = 0.5) -> bool:
-    p = urlparse(url)
-    host = p.hostname or "localhost"
-    # default ports: 4318 for http, 4317 for grpc if not provided
-    port = p.port or (4318 if p.scheme in ("http", "https") else 4317)
-    try:
-        with socket.create_connection((host, port), timeout):
-            return True
-    except Exception:
-        return False
-
-
 def main():
-    # quick reachability check before creating exporters
-    endpoint = endpoint_env or "grpc://localhost:4318/v1/logs"
-    reachable = _is_endpoint_reachable(endpoint, timeout=0.5)
-    print(f"Endpoint {endpoint} reachable: {reachable}", file=sys.stderr)
-
     # Demonstrate resolving exporters for each signal using the module-level mapping.
     try:
         signals = ["logs", "traces", "metrics"]
