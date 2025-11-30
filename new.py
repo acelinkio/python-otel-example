@@ -1,7 +1,7 @@
 def setup_otelproviders() -> tuple[object, object, object]:
     import os
     if not (os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip()):
-        print("OTEL_EXPORTER_OTLP_ENDPOINT not specified, skipping otel exporter setup.")
+        print("OTEL_EXPORTER_OTLP_ENDPOINT not specified, skipping otel provider setup.")
         return None, None, None
     elif os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL", "").lower().strip() == "grpc":
         # lazy-import gRPC exporter; if that fails, fail hard
