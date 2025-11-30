@@ -44,7 +44,11 @@ class SafeOTLPLogExporter:
             proto_env = os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL", "").lower().strip()
             if proto_env in ("grpc",):
                 want_grpc = True
-            elif proto_env.startswith("http") or proto_env in ("http/protobuf", "http/json", "http"):
+            elif proto_env.startswith("http") or proto_env in (
+                "http/protobuf",
+                "http/json",
+                "http",
+            ):
                 want_grpc = False
             else:
                 # fall back to endpoint scheme if available
