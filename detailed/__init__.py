@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 # configure logging first so any later imports/logs use your formatter
-from detailed.log import configure_logging
+from .log import configure_logging
 configure_logging()
 
 # install OTEL as early as possible (will allow subsequent logs to be forwarded)
-from detailed.otel import setup_otelproviders
+from .otel import setup_otelproviders
 setup_otelproviders()
 
 import logging
