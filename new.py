@@ -75,15 +75,22 @@ def setup_otelproviders() -> tuple[object, object, object]:
 
 def setup_logging():
     import sys
+    import os
     import logging
     from opentelemetry.sdk._logs import LoggingHandler
     
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
+
+    # Add OpenTelemetry handler
+    # set logging level via OTEL_LOG_LEVEL env var
+    # https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#general-sdk-configuration
     root_logger.addHandler(LoggingHandler())
 
+    # Add stdout handler
     stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.setLevel(logging.WARNING)
+    # set logging level via STDOUT_LOG_LEVEL env var or default to WARNING
+    stdout_handler.setLevel(getattr(logging, os.getenv("STDOUT_LOG_LEVEL", "INFO").upper()))
     stdout_handler.setFormatter(
         logging.Formatter(
             fmt="[STDOUT][{levelname}][{name}] {message}",
