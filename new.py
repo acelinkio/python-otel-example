@@ -88,7 +88,7 @@ def setup_logging(otel_enabled: bool):
     stdout_handler.setLevel(logging.WARNING)
     stdout_handler.setFormatter(
         logging.Formatter(
-            fmt="[STDOUT][{levelname}] {message}",
+            fmt="[STDOUT][{levelname}][{name}] {message}",
             style="{",
         )
     )
@@ -114,9 +114,16 @@ def main():
                 span.set_attribute("iteration", i)
                 # increment metric
                 counter.add(1, {"iteration": str(i)})
-                # logs (will be exported via OTel + python handlers)
-                log.info("iteration %d - info goes to OTLP", i)
-                log.warning("iteration %d - warning goes to stdout + OTLP", i)
+                try:
+                    # simulate an error for demonstration
+                    if i == 5:
+                        1 / 0
+                    # normal logs
+                    log.info("iteration %d - info goes to OTLP", i)
+                    log.warning("iteration %d - warning goes to stdout + OTLP", i)
+                except Exception:
+                    # log.exception() includes exc_info=True and prints the traceback
+                    log.exception("iteration %d failed with exception", i)
             time.sleep(1)
     finally:
         if tracer_provider is not None:
