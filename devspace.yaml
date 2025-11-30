@@ -35,7 +35,7 @@ dev:
     devImage: docker.io/astral/uv:python3.13-trixie
     workingDir: /app
     sync:
-      - path: .:/app
+      - path: ./simple:/app
         excludePaths:
           - __pycache__
           - .venv
@@ -49,6 +49,6 @@ dev:
         echo "Running uv sync..."
         uv sync --locked || (echo 'uv sync failed' && exit 1)
         echo "Starting..."
-        uv run new.py
+        uv run main.py
     ports:
       - port: "4389"
