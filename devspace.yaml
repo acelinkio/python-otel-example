@@ -49,6 +49,6 @@ dev:
         echo "Running uv sync..."
         uv sync --locked || (echo 'uv sync failed' && exit 1)
         echo "Starting..."
-        uv run test.py
+        uv run new.py
     ports:
       - port: "4389"
