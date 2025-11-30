@@ -1,4 +1,4 @@
-def setup_otelexporters() -> tuple[object, object, object]:
+def setup_otelproviders() -> tuple[object, object, object]:
     import os
     if not (os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip()):
         print("OTEL_EXPORTER_OTLP_ENDPOINT not specified, skipping otel exporter setup.")
@@ -97,13 +97,13 @@ def main():
         import logging
         from opentelemetry import trace, metrics
 
-        tracer_provider, meter_provider, logger_provider = setup_otelexporters()
+        tracer_provider, meter_provider, logger_provider = setup_otelproviders()
         setup_logging()
 
         log = logging.getLogger(__name__)
         tracer = trace.get_tracer(__name__)
         meter = metrics.get_meter(__name__)
-        
+
         counter = meter.create_counter("example.counter", description="Example counter")
 
         import time
