@@ -1,0 +1,49 @@
+version: v2beta1
+name: python-otel
+deployments:
+  backend:
+    kubectl:
+      inlineManifest: |-
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: busybox-sleep
+        spec:
+          selector:
+            matchLabels:
+              app.kubernetes.io/name: busybox
+          replicas: 1
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/name: busybox
+            spec:
+              containers:
+              - name: busybox
+                image: docker.io/busybox:1.28
+                args:
+                - sleep
+                - "1000000"
+dev:
+  backend:
+    imageSelector: docker.io/busybox:1.28
+    devImage: docker.io/astral/uv:python3.13-trixie
+    workingDir: /app
+    sync:
+      - path: .:/app
+        excludePaths:
+          - __pycache__
+          - .venv
+        startContainer: true
+        onUpload:
+          restartContainer: true
+    command:
+      - bash
+      - -c
+      - |
+        echo "Running uv sync..."
+        uv sync --locked || (echo 'uv sync failed' && exit 1)
+        echo "Starting..."
+        uv run test.py
+    ports:
+      - port: "4389"
