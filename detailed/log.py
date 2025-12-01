@@ -17,7 +17,7 @@ def configure_logging():
     )
     stdout_handler.setFormatter(
         logging.Formatter(
-            fmt="[STDOUT][{levelname}][{name}] {message}",
+            fmt="[{levelname}][{name}] {message}",
             style="{",
         )
     )
