@@ -20,7 +20,11 @@ app = FastAPI(
 async def root():
     return {"message": "Hello World"}
 
-log.info("info: YOU ROCK")
-log.warn("warn: I rock")
-log.error("exception: dogs are amazing")
-log.error("exception: cats are fluffy")
+# move top-level logging into startup so it runs after import/startup steps
+@app.on_event("startup")
+async def on_startup():
+    log.info("info: YOU ROCK")
+    log.warning("warn: I rock")
+    log.error("error: dogs are amazing")
+    log.error("error: cats are fluffy")
+    log.error("error: lizards are bitey")

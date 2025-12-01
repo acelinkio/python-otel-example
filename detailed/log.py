@@ -6,6 +6,8 @@ from opentelemetry.sdk._logs import LoggingHandler
 
 def configure_logging():
     root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+
     # Add stdout handler
     stdout_handler = logging.StreamHandler(sys.stdout)
     # set logging level via STDOUT_LOG_LEVEL env var or default to INFO
