@@ -1,9 +1,5 @@
 # python-otel-example
-example repo for testing otel
-
+example repo for testing otel in a few different languages/projects
 
 # running
-```sh
-uv sync --locked
-uv run main.py
-```
+look at the devspace.yaml for how setup happens
