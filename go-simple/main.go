@@ -142,30 +142,67 @@ func initObservability() func() {
 	otel.SetMeterProvider(mp)
 
 	// Initialize logging - respects OTEL_LOGS_EXPORTER env var
-	var logExporter sdklog.Exporter
 	logsExporter := os.Getenv("OTEL_LOGS_EXPORTER")
-	if logsExporter == "stdout" {
-		logExporter, err = stdoutlog.New(stdoutlog.WithPrettyPrint())
-	} else {
-		// Default to OTLP - uses OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
-		logExporter, err = otlploggrpc.New(ctx)
+
+	// Prepare exporters
+	var stdoutExporter sdklog.Exporter
+	var otlpExporter sdklog.Exporter
+	// declare once so the return closure can call Shutdown on it
+	var loggerProvider *sdklog.LoggerProvider
+
+	switch logsExporter {
+	case "stdout":
+		stdoutExporter, err = stdoutlog.New(stdoutlog.WithPrettyPrint())
+		if err != nil {
+			log.Fatalf("failed to create stdout log exporter: %v", err)
+		}
+		// Only stdout: single processor below
+		loggerProvider = sdklog.NewLoggerProvider(
+			sdklog.WithProcessor(sdklog.NewBatchProcessor(stdoutExporter)),
+			sdklog.WithResource(res),
+		)
+		otelLogger = loggerProvider.Logger("sakura-service")
+		// install slog handler that forwards to the otel logger
+		slogHandler := &otelSlogHandler{logger: otelLogger}
+		slog.SetDefault(slog.New(slogHandler))
+
+	case "otlp":
+		otlpExporter, err = otlploggrpc.New(ctx)
+		if err != nil {
+			log.Fatalf("failed to create OTLP log exporter: %v", err)
+		}
+		// Only OTLP: single processor below
+		loggerProvider = sdklog.NewLoggerProvider(
+			sdklog.WithProcessor(sdklog.NewBatchProcessor(otlpExporter)),
+			sdklog.WithResource(res),
+		)
+		otelLogger = loggerProvider.Logger("sakura-service")
+		// install slog handler that forwards to the otel logger
+		slogHandler := &otelSlogHandler{logger: otelLogger}
+		slog.SetDefault(slog.New(slogHandler))
+
+	default:
+		// Default: send to both stdout and OTLP
+		stdoutExporter, err = stdoutlog.New(stdoutlog.WithPrettyPrint())
+		if err != nil {
+			log.Fatalf("failed to create stdout log exporter: %v", err)
+		}
+		otlpExporter, err = otlploggrpc.New(ctx)
+		if err != nil {
+			log.Fatalf("failed to create OTLP log exporter: %v", err)
+		}
+
+		loggerProvider = sdklog.NewLoggerProvider(
+			sdklog.WithProcessor(sdklog.NewBatchProcessor(stdoutExporter)),
+			sdklog.WithProcessor(sdklog.NewBatchProcessor(otlpExporter)),
+			sdklog.WithResource(res),
+		)
+
+		// Create OpenTelemetry logger and install slog handler that forwards to it
+		otelLogger = loggerProvider.Logger("sakura-service")
+		slogHandler := &otelSlogHandler{logger: otelLogger}
+		slog.SetDefault(slog.New(slogHandler))
 	}
-	if err != nil {
-		log.Fatalf("failed to create log exporter: %v", err)
-	}
-
-	loggerProvider := sdklog.NewLoggerProvider(
-		sdklog.WithProcessor(sdklog.NewBatchProcessor(logExporter)),
-		sdklog.WithResource(res),
-	)
-
-	// Create OpenTelemetry logger
-	otelLogger = loggerProvider.Logger("sakura-service")
-
-	// install slog handler that forwards to the otel logger
-	slogHandler := &otelSlogHandler{logger: otelLogger}
-	// set the global default slog logger to our handler
-	slog.SetDefault(slog.New(slogHandler))
 
 	// Create metrics instruments
 	meter := otel.Meter("sakura-service")
