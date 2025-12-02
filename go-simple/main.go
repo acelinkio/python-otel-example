@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"log/slog"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -24,6 +25,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -31,6 +33,60 @@ var (
 	petalHistogram metric.Int64Histogram
 	otelLogger     otellogs.Logger
 )
+
+// new: slog handler that forwards to the OpenTelemetry SDK logger
+type otelSlogHandler struct {
+	logger otellogs.Logger
+}
+
+func (h *otelSlogHandler) Enabled(_ context.Context, _ slog.Level) bool { return true }
+
+func (h *otelSlogHandler) Handle(ctx context.Context, r slog.Record) error {
+	var rec otellogs.Record
+
+	// Record timestamp (r.Time is a time.Time field)
+	rec.SetTimestamp(r.Time)
+
+	// map slog level -> otel severity
+	switch r.Level {
+	case slog.LevelError:
+		rec.SetSeverity(otellogs.SeverityError)
+	case slog.LevelWarn:
+		rec.SetSeverity(otellogs.SeverityWarn)
+	case slog.LevelInfo:
+		rec.SetSeverity(otellogs.SeverityInfo)
+	case slog.LevelDebug:
+		rec.SetSeverity(otellogs.SeverityDebug)
+	default:
+		// fallback to Info if unspecified
+		rec.SetSeverity(otellogs.SeverityInfo)
+	}
+
+	rec.SetBody(otellogs.StringValue(r.Message))
+
+	// copy attributes from slog record (use the Attrs iterator)
+	r.Attrs(func(a slog.Attr) bool {
+		rec.AddAttributes(otellogs.String(a.Key, fmt.Sprint(a.Value)))
+		return true
+	})
+
+	// if a span is in ctx, include trace/span ids
+	if s := trace.SpanFromContext(ctx); s != nil {
+		sc := s.SpanContext()
+		if sc.IsValid() {
+			rec.AddAttributes(
+				otellogs.String("trace_id", sc.TraceID().String()),
+				otellogs.String("span_id", sc.SpanID().String()),
+			)
+		}
+	}
+
+	h.logger.Emit(ctx, rec)
+	return nil
+}
+
+func (h *otelSlogHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
+func (h *otelSlogHandler) WithGroup(_ string) slog.Handler       { return h }
 
 func initObservability() func() {
 	ctx := context.Background()
@@ -106,6 +162,11 @@ func initObservability() func() {
 	// Create OpenTelemetry logger
 	otelLogger = loggerProvider.Logger("sakura-service")
 
+	// install slog handler that forwards to the otel logger
+	slogHandler := &otelSlogHandler{logger: otelLogger}
+	// set the global default slog logger to our handler
+	slog.SetDefault(slog.New(slogHandler))
+
 	// Create metrics instruments
 	meter := otel.Meter("sakura-service")
 	requestCounter, err = meter.Int64Counter(
@@ -168,18 +229,14 @@ func main() {
 		))
 		
 		// Send structured logs via OpenTelemetry
-		logRecord := otellogs.Record{}
-		logRecord.SetTimestamp(time.Now())
-		logRecord.SetSeverity(otellogs.SeverityInfo)
-		logRecord.SetBody(otellogs.StringValue("🌸 Serving sakura stats"))
-		logRecord.AddAttributes(
-			otellogs.String("sakura.stage", stage),
-			otellogs.Int("sakura.petals", petals),
-			otellogs.String("service.name", "sakura-service"),
-			otellogs.String("trace_id", span.SpanContext().TraceID().String()),
-			otellogs.String("span_id", span.SpanContext().SpanID().String()),
+		// Use slog (forwarded to OTLP by otelSlogHandler)
+		slog.InfoContext(ctx, "🌸 Serving sakura stats",
+			"sakura.stage", stage,
+			"sakura.petals", petals,
+			"service.name", "sakura-service",
+			"trace_id", span.SpanContext().TraceID().String(),
+			"span_id", span.SpanContext().SpanID().String(),
 		)
-		otelLogger.Emit(ctx, logRecord)
 		
 		fmt.Fprintf(w, `{"stage": "%s", "petals": %d}`, stage, petals)
 	})
