@@ -20,6 +20,7 @@ func main() {
 	}
 	defer logger.Sync()
 
-	logger.Info("started")
-	logger.Error("O HELL YEAH")
+	logger.Info("5hey info")
+	logger.Warn("5be careful!")
+	logger.Error("5stOPPP right now!!!")
 }
