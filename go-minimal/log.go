@@ -17,44 +17,28 @@ type SlogAdapter struct {
 
 func (a *SlogAdapter) Sync() error { return nil }
 
-// multiHandler forwards records to multiple slog.Handlers.
-type multiHandler struct {
-    handlers []slog.Handler
+// multiHandler -> small tee that forwards to two handlers with fewer lines.
+type tee struct {
+    a, b slog.Handler
 }
 
-func (m *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
-    for _, h := range m.handlers {
-        if h.Enabled(ctx, level) {
-            return true
-        }
-    }
-    return false
+func NewTee(a, b slog.Handler) slog.Handler { return &tee{a: a, b: b} }
+
+func (t *tee) Enabled(ctx context.Context, level slog.Level) bool {
+    return t.a.Enabled(ctx, level) || t.b.Enabled(ctx, level)
 }
 
-func (m *multiHandler) Handle(ctx context.Context, r slog.Record) error {
-    var ret error
-    for _, h := range m.handlers {
-        if err := h.Handle(ctx, r); err != nil {
-            ret = err
-        }
-    }
-    return ret
+func (t *tee) Handle(ctx context.Context, r slog.Record) error {
+    _ = t.a.Handle(ctx, r)
+    return t.b.Handle(ctx, r)
 }
 
-func (m *multiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-    hs := make([]slog.Handler, len(m.handlers))
-    for i, h := range m.handlers {
-        hs[i] = h.WithAttrs(attrs)
-    }
-    return &multiHandler{handlers: hs}
+func (t *tee) WithAttrs(attrs []slog.Attr) slog.Handler {
+    return &tee{a: t.a.WithAttrs(attrs), b: t.b.WithAttrs(attrs)}
 }
 
-func (m *multiHandler) WithGroup(name string) slog.Handler {
-    hs := make([]slog.Handler, len(m.handlers))
-    for i, h := range m.handlers {
-        hs[i] = h.WithGroup(name)
-    }
-    return &multiHandler{handlers: hs}
+func (t *tee) WithGroup(name string) slog.Handler {
+    return &tee{a: t.a.WithGroup(name), b: t.b.WithGroup(name)}
 }
 
 type levelFilter struct {
@@ -99,8 +83,8 @@ func InitLogger(ctx context.Context, provider otellog.LoggerProvider) (*SlogAdap
     otelHandler := otelslog.NewHandler("my/pkg/name", otelslog.WithLoggerProvider(provider))
 
     // combine both so logs go to stdout AND OTLP exporter
-    handler := &multiHandler{handlers: []slog.Handler{stdoutFiltered, otelHandler}}
-
+    handler := NewTee(stdoutFiltered, otelHandler)
+    
     logger := slog.New(handler)
     adapter := &SlogAdapter{logger}
 
