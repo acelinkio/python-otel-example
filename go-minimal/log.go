@@ -57,6 +57,33 @@ func (m *multiHandler) WithGroup(name string) slog.Handler {
     return &multiHandler{handlers: hs}
 }
 
+type levelFilter struct {
+    min slog.Level
+    h   slog.Handler
+}
+
+func (f *levelFilter) Enabled(ctx context.Context, level slog.Level) bool {
+    if level < f.min {
+        return false
+    }
+    return f.h.Enabled(ctx, level)
+}
+
+func (f *levelFilter) Handle(ctx context.Context, r slog.Record) error {
+    if r.Level < f.min {
+        return nil
+    }
+    return f.h.Handle(ctx, r)
+}
+
+func (f *levelFilter) WithAttrs(attrs []slog.Attr) slog.Handler {
+    return &levelFilter{min: f.min, h: f.h.WithAttrs(attrs)}
+}
+
+func (f *levelFilter) WithGroup(name string) slog.Handler {
+    return &levelFilter{min: f.min, h: f.h.WithGroup(name)}
+}
+
 // InitLogger sets up a slog logger. It keeps the same signature (accepting an
 // otel API LoggerProvider) so the provider can be passed through; currently
 // provider isn't used by this simple adapter but can be wired into a custom
@@ -65,11 +92,14 @@ func InitLogger(ctx context.Context, provider otellog.LoggerProvider) (*SlogAdap
     // stdout JSON handler
     stdout := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{})
 
+    // filter stdout to Info+ (change slog.LevelInfo to desired minimum)
+    stdoutFiltered := &levelFilter{min: slog.LevelInfo, h: stdout}
+
     // OTEL bridge handler (for shipping to collector)
     otelHandler := otelslog.NewHandler("my/pkg/name", otelslog.WithLoggerProvider(provider))
 
     // combine both so logs go to stdout AND OTLP exporter
-    handler := &multiHandler{handlers: []slog.Handler{stdout, otelHandler}}
+    handler := &multiHandler{handlers: []slog.Handler{stdoutFiltered, otelHandler}}
 
     logger := slog.New(handler)
     adapter := &SlogAdapter{logger}

@@ -21,6 +21,5 @@ func main() {
 	defer logger.Sync()
 
 	logger.Info("started")
-	logger.Error("fuck")
-	logger.Error("confirmed functional slog to stdout & otel!")
+	logger.Error("O HELL YEAH")
 }
