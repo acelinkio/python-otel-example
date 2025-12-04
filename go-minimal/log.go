@@ -74,6 +74,8 @@ func InitLogger(ctx context.Context) (*SlogAdapter, func(context.Context) error,
 	logger := slog.New(handler)
 	adapter := &SlogAdapter{logger}
 	shutdown := func(ctx context.Context) error { return nil }
+
+	slog.SetDefault(adapter.Logger)
 	return adapter, shutdown, nil
 }
 

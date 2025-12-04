@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 )
 
 func main() {
@@ -10,17 +10,17 @@ func main() {
 
 	shutdownOtel, err := InitOtelLogging(ctx)
 	if err != nil {
-		log.Fatalf("otel init: %v", err)
+		slog.Error("otel init", "err", err)
 	}
-	defer shutdownOtel(ctx)
+	defer func() { _ = shutdownOtel(ctx) }()
 
 	logger, _, err := InitLogger(ctx)
 	if err != nil {
-		log.Fatalf("logger init: %v", err)
+		slog.Error("logger init", "err", err)
 	}
 	defer logger.Sync()
 
-	logger.Info("dog")
-	logger.Warn("heyuo")
-	logger.Error("123")
+	slog.Info("info: dog barks")
+	slog.Warn("warning: don't 123")
+	slog.Error("error: hey0")
 }
