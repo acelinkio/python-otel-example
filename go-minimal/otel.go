@@ -18,12 +18,14 @@ func InitOtelLogging(ctx context.Context) (func(context.Context) error, error) {
 		return nil, err
 	}
 
-	otelprovider := sdklog.NewLoggerProvider(
+	provider := sdklog.NewLoggerProvider(
 		sdklog.WithProcessor(sdklog.NewBatchProcessor(exp)),
 	)
 
+  otelprovider = provider
+
 	shutdown := func(ctx context.Context) error {
-		return otelprovider.Shutdown(ctx)
+		return provider.Shutdown(ctx)
 	}
 
 	return shutdown, nil
