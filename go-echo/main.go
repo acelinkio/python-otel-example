@@ -55,11 +55,11 @@ func main() {
 		}
 	}
 	sort.Strings(ignore)
-	if len(ignore) == 0 {
-		slog.Info("web_request.ignore_paths", "paths", "none")
-	} else {
-		slog.Info("web_request.ignore_paths", "paths", strings.Join(ignore, ","))
+	s := strings.Join(ignore, ",")
+	if s == "" {
+		s = "none"
 	}
+	slog.Info("web_request.ignore_paths", "paths", s)
 
 	contains := func(list []string, s string) bool {
 		for _, v := range list {
