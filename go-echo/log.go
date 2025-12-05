@@ -20,6 +20,14 @@ func (a *SlogAdapter) Sync() error {
 	return nil
 }
 
+// add Write so SlogAdapter satisfies io.Writer (Echo's logger output)
+func (a *SlogAdapter) Write(p []byte) (int, error) {
+	msg := strings.TrimSpace(string(p))
+	// Echo middleware writes request lines at INFO; use Info here.
+	a.Info(msg)
+	return len(p), nil
+}
+
 type tee struct {
 	a, b slog.Handler
 	minA slog.Level

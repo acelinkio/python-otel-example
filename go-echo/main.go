@@ -10,10 +10,6 @@ import (
 )
 
 func main() {
-	e := echo.New()
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
-
 	ctx := context.Background()
 
 	logger, _, err := SetupLogger(ctx)
@@ -31,6 +27,11 @@ func main() {
 	slog.Info("info: dog barks")
 	slog.Warn("warning: don't 123")
 	slog.Error("error: hey0123")
+
+	e := echo.New()
+	e.Logger.SetOutput(logger)
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
 
 	e.GET("/", hello)
 	// Start server
