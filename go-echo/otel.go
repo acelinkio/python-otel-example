@@ -60,18 +60,17 @@ func SetupOtel(ctx context.Context) (func(context.Context) error, error) {
 	slog.Info("Configuring OTEL")
 	switch {
 	case endpoint == "":
-		slog.Info("OTEL_EXPORTER_OTLP_ENDPOINT not set")
-		slog.Info("Using NoOp exporters")
+		slog.Info("Using OLTP exporter type", "type", "noop")
 		le = nil
 		me = nil
 		te = nil
 	case strings.ToLower(strings.TrimSpace(os.Getenv("OTEL_EXPORTER_OTLP_PROTOCOL"))) == "grpc":
-		slog.Info("Using OTLP gRPC exporters")
+		slog.Info("Using OLTP exporter type", "type", "grpc")
 		le, err = otlploggrpc.New(ctx)
 		me, err = otlpmetricgrpc.New(ctx)
 		te, err = otlptracegrpc.New(ctx)
 	default:
-		slog.Info("Using OTLP HTTP exporters")
+		slog.Info("Using OLTP exporter type", "type", "http")
 		le, err = otlploghttp.New(ctx)
 		me, err = otlpmetrichttp.New(ctx)
 		te, err = otlptracehttp.New(ctx)

@@ -37,8 +37,7 @@ func main() {
 	// build ignore list from env or fall back to defaults
 	var ignore []string
 	if val, ok := os.LookupEnv("LOG_IGNORE_WEBPATHS"); !ok {
-		// env not provided -> use defaults
-		slog.Info("LOG_IGNORE_WEBPATHS not set, using defaults")
+		slog.Info("env LOG_IGNORE_WEBPATHS not set, using defaults")
 		ignore = []string{
 			"/health",
 			"/favicon.ico",
@@ -55,11 +54,8 @@ func main() {
 		}
 	}
 	sort.Strings(ignore)
-	s := strings.Join(ignore, ",")
-	if s == "" {
-		s = "none"
-	}
-	slog.Info("web_request.ignore_paths", "paths", s)
+	stringignore := strings.Join(ignore, ",")
+	slog.Info("web_request.log_ignore_paths", "paths", stringignore)
 
 	contains := func(list []string, s string) bool {
 		for _, v := range list {
