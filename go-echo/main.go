@@ -70,6 +70,7 @@ func main() {
 	e.Use(middleware.Recover())
 
 	e.GET("/", hello)
+	e.GET("/health", health)
 	// Start server
 	if err := e.Start(":8025"); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("failed to start server", "error", err)
@@ -78,4 +79,8 @@ func main() {
 
 func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World!")
+}
+
+func health(c echo.Context) error {
+	return c.String(http.StatusOK, "I AM HEALTHY")
 }
