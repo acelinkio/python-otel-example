@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"go.opentelemetry.io/contrib/bridges/otelslog"
-	"go.opentelemetry.io/otel/log/global"
+	logotelbridge "go.opentelemetry.io/contrib/bridges/otelslog"
+	logotelglobal "go.opentelemetry.io/otel/log/global"
 )
 
 // SlogAdapter embeds slog.Logger and adds a Sync method so callers that expect
@@ -82,7 +82,7 @@ func SetupLogger(ctx context.Context) (*SlogAdapter, func(context.Context) error
 			return a
 		},
 	})
-	otelHandler := otelslog.NewHandler("mylog", otelslog.WithLoggerProvider(global.GetLoggerProvider()))
+	otelHandler := logotelbridge.NewHandler("mylog", logotelbridge.WithLoggerProvider(logotelglobal.GetLoggerProvider()))
 
 	minStdout := parseLogLevel(os.Getenv("STDOUT_LOG_LEVEL"))
 	minOtel := parseLogLevel(os.Getenv("OTEL_LOG_LEVEL"))
