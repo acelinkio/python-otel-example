@@ -1,1 +1,0 @@
-* have env_var to silence logs for live/ready probes, missing /favicon.ico
