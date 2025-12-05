@@ -42,21 +42,24 @@ func main() {
 		LogError:    true,
 		LogHost:     true,
 		LogMethod:   true,
+		LogUserAgent: true,
 		HandleError: true, // forwards error to the global error handler, so it can decide appropriate status code
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
 			if v.Error == nil {
-				logger.LogAttrs(context.Background(), slog.LevelInfo, "REQUEST",
-					slog.String("host", v.Host),
+				logger.LogAttrs(context.Background(), slog.LevelInfo, "web_request",
 					slog.String("method", v.Method),
-					slog.String("uri", v.URI),
 					slog.Int("status", v.Status),
+					slog.String("host", v.Host),
+					slog.String("uri", v.URI),
+					slog.String("agent", v.UserAgent),
 				)
 			} else {
-				logger.LogAttrs(context.Background(), slog.LevelError, "REQUEST_ERROR",
-					slog.String("host", v.Host),
+				logger.LogAttrs(context.Background(), slog.LevelError, "web_request_error",
 					slog.String("method", v.Method),
-					slog.String("uri", v.URI),
 					slog.Int("status", v.Status),
+					slog.String("host", v.Host),
+					slog.String("uri", v.URI),
+					slog.String("agent", v.UserAgent),
 					slog.String("err", v.Error.Error()),
 				)
 			}
