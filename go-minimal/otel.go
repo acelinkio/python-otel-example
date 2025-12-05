@@ -39,26 +39,23 @@ func InitOtelLogging(ctx context.Context) (func(context.Context) error, error) {
 		return nil, err
 	}
 
-	var sdkProvider *sdklog.LoggerProvider
-	var provider otellog.LoggerProvider
-
 	// default to noop providers
-	provider = noopsdklog.NewLoggerProvider()
+	var lp otellog.LoggerProvider = noopsdklog.NewLoggerProvider()
 
+	// use provider with configured exporter
 	if le != nil {
-		sdkProvider = sdklog.NewLoggerProvider(
+		lp = sdklog.NewLoggerProvider(
 			sdklog.WithProcessor(sdklog.NewBatchProcessor(le)),
 		)
-		provider = sdkProvider
 	}
-	global.SetLoggerProvider(provider)
+	global.SetLoggerProvider(lp)
 
 	log_shutdown := func(ctx context.Context) error {
 		slog.Info("Shutting down OTEL")
-		if sdkProvider == nil {
-			return nil
+		if sdkProv, ok := lp.(*sdklog.LoggerProvider); ok && sdkProv != nil {
+			return sdkProv.Shutdown(ctx)
 		}
-		return sdkProvider.Shutdown(ctx)
+		return nil
 	}
 
 	return log_shutdown, nil
