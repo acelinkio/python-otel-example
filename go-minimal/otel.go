@@ -33,7 +33,7 @@ import (
 // InitOtelLogging creates the OTLP log exporter and returns a shutdown function.
 // It chooses gRPC or HTTP exporter based on OTEL_EXPORTER_OTLP_PROTOCOL and skips
 // setup if OTEL_EXPORTER_OTLP_ENDPOINT is not set.
-func InitOtelLogging(ctx context.Context) (func(context.Context) error, error) {
+func SetupOtel(ctx context.Context) (func(context.Context) error, error) {
 	var le logsdk.Exporter
 	var me metricsdk.Exporter
 	var te tracesdk.SpanExporter

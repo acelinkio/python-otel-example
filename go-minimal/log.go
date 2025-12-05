@@ -64,7 +64,7 @@ func (t *tee) WithGroup(name string) slog.Handler {
 	return NewTee(t.a.WithGroup(name), t.b.WithGroup(name), t.minA, t.minB)
 }
 
-func InitLogger(ctx context.Context) (*SlogAdapter, func(context.Context) error, error) {
+func SetupLogger(ctx context.Context) (*SlogAdapter, func(context.Context) error, error) {
 	stdout := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			// drop the default time attribute so text output has no timestamp

@@ -8,13 +8,13 @@ import (
 func main() {
 	ctx := context.Background()
 
-	logger, _, err := InitLogger(ctx)
+	logger, _, err := SetupLogger(ctx)
 	if err != nil {
 		slog.Error("logger init", "err", err)
 	}
 	defer logger.Sync()
 
-	cleanup, err := InitOtelLogging(ctx)
+	cleanup, err := SetupOtel(ctx)
 	if err != nil {
 		slog.Error("otel init", "err", err)
 	}
